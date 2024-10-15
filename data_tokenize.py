@@ -1,5 +1,4 @@
 import pickle as pkl
-import sys
 from pathlib import Path
 from typing import List, Literal, Tuple
 
@@ -73,7 +72,6 @@ class RawDataset(metaclass=Singleton):
                     res.append(d.to_pandas())
                 self.ds = pd.concat(res)
         else:
-            print(sys.path)
             self.ds = pd.read_csv(str(data_name))
             logger.info("加载原始数据集成功")
         self.train_eval_test_data = self._load_dataset(self.ds)
@@ -206,23 +204,6 @@ class TranslateDataset(torch.utils.data.Dataset):
         # for i in tqdm(range(len(trg))):
         #     trg_encoded.append(tokenizer.encode(trg[i]).ids)
         # return src_encoded, trg_encoded
-
-    def _train_tokenizer(
-        self, ds: DatasetDict | Dataset | IterableDatasetDict | IterableDataset
-    ) -> Tokenizer:
-        tokenizer = Tokenizer(BPE())
-        tokenizer.pre_tokenizer = BertPreTokenizer()
-        tokenizer_trainer = BpeTrainer(
-            vocab_size=30000,
-            min_frequency=5,
-            show_progress=True,
-            special_tokens=["[PAD]", "[BOS]", "[EOS]", "[MASK]", "[UNK]"],
-        )
-        tokenizer.train_from_iterator(
-            ds.iloc[:, 0].to_list() + ds.iloc[:, 1].to_list(), tokenizer_trainer
-        )
-
-        return tokenizer
 
     def __getitem__(self, index: int):
 
