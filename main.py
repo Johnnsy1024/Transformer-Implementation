@@ -27,7 +27,7 @@ test_dataset = TranslateDataset(
 # 生成DataLoader
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, drop_last=True)
 eval_dataloader = DataLoader(eval_dataset, batch_size=64, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True)
+test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
 vocab_size = train_dataset.vocab_size
 tokenizer = train_dataset.tokenizer
@@ -129,75 +129,22 @@ for epoch in range(EPOCH):
 
 torch.save(model, "./transformer.pth")
 
-# 加载保存的模型
-model = torch.load("./transformer.pth")
-model.eval()
-
-
-def translate(model, src, max_length=50):
-    # 推理按单个样本进行
-    model.eval()
-    src = src.to(device)
-
-    bos_id = tokenizer.encode("[BOS]").ids[0]
-    pad_id = tokenizer.encode("[PAD]").ids[0]
-    eos_id = tokenizer.encode("[EOS]").ids[0]
-    trg_raw = (
-        torch.tensor(bos_id).unsqueeze(0).unsqueeze(0)
-    )  # expand第二个维度为-1表示不动该维度的大小 [1, 1]
-    # trg = F.pad(
-    #     torch.tensor(bos_id).unsqueeze(0),
-    #     (0, trg_max_length - 1),
-    #     "constant",
-    #     pad_id,
-    # ).expand(
-    #     src.shape[0], -1
-    # )
-    # trg = torch.zeros((src.shape[0], 1), dtype=torch.long, device=device)
-
-    for i in range(max_length - 1):
-        trg = F.pad(trg_raw, (0, trg_max_length - i - 1), "constant", pad_id)  # 填充长度
-        output = model(src, trg)  # output: [1, seq_len, vocab_size]
-        next_token = output[:, i + 1, :].argmax(dim=-1, keepdim=True)  # [1, 1]
-        trg_raw = torch.cat([trg_raw, next_token], dim=-1)
-
-        # 如果生成了结束标记（假设为1），则停止生成
-        if next_token.item() == eos_id:
-            break
-
-    return trg
-
-
-# 对测试集进行翻译
-model.to(device)
-translations = []
-references = []
-
-with torch.no_grad():
-    for batch_idx, (src, trg) in enumerate(test_dataloader):
-        translated = translate(model, src)
-        translations.extend(translated.tolist())
-        references.extend(trg.tolist())
-
-        if batch_idx % 10 == 0:
-            logger.info(f"已翻译 {batch_idx * test_dataloader.batch_size} 个样本")
-
 
 # 将索引转换回文本
-def indices_to_text(indices, vocab):
-    return " ".join([vocab.itos[idx] for idx in indices if idx not in [0, 1]])
+# def indices_to_text(indices, vocab):
+#     return " ".join([vocab.itos[idx] for idx in indices if idx not in [0, 1]])
 
 
-vocab = train_dataset.vocab  # 假设vocab在train_dataset中可用
+# vocab = train_dataset.vocab  # 假设vocab在train_dataset中可用
 
-translated_texts = [indices_to_text(t, vocab) for t in translations]
-reference_texts = [indices_to_text(r, vocab) for r in references]
+# translated_texts = [indices_to_text(t, vocab) for t in translations]
+# reference_texts = [indices_to_text(r, vocab) for r in references]
 
-# 打印一些翻译结果示例
-for i in range(5):
-    logger.info(f"源文本: {indices_to_text(test_dataset[i][0], vocab)}")
-    logger.info(f"参考翻译: {reference_texts[i]}")
-    logger.info(f"模型翻译: {translated_texts[i]}")
-    logger.info("---")
+# # 打印一些翻译结果示例
+# for i in range(5):
+#     logger.info(f"源文本: {indices_to_text(test_dataset[i][0], vocab)}")
+#     logger.info(f"参考翻译: {reference_texts[i]}")
+#     logger.info(f"模型翻译: {translated_texts[i]}")
+#     logger.info("---")
 
 # 这里可以添加评估指标，如BLEU分数等
